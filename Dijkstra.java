@@ -1,14 +1,13 @@
 import java.util.*;
 
-public class Prim {
+public class Dijkstra {
 
-    private String input;  
-
+    private String input; 
     private Map<String, List<int[]>> graph = new HashMap<>();
     private List<String> nodeList = new ArrayList<>();
     private Map<String, Integer> nodeIndex = new LinkedHashMap<>();
 
-    public Prim(String input) {
+    public Dijkstra(String input) {
         this.input = input;
     }
 
@@ -16,17 +15,14 @@ public class Prim {
         String[] edges = input.split(",");
         for (String edge : edges) {
             String[] parts = edge.trim().split("-");
-            if (parts.length != 3) {
-                System.out.println("รูปแบบผิด: " + edge + " (ต้องเป็น node1-node2-weight)");
-                continue;
-            }
+            if (parts.length != 3) continue;
+
             String u = parts[0].trim();
             String v = parts[1].trim();
             int w;
             try {
                 w = Integer.parseInt(parts[2].trim());
             } catch (NumberFormatException e) {
-                System.out.println("weight ต้องเป็นตัวเลข: " + edge);
                 continue;
             }
 
@@ -40,60 +36,62 @@ public class Prim {
 
     public void run(String startNode) {
         parseInput();
-        if (nodeList.isEmpty()) { System.out.println("ไม่มีข้อมูล"); return; }
-        
         if (!nodeIndex.containsKey(startNode)) {
             System.out.println("ไม่พบ Node เริ่มต้น: " + startNode);
             return;
         }
 
         int n = nodeList.size();
-        int startIdx = nodeIndex.get(startNode); 
-        int[] key     = new int[n];
-        int[] parent  = new int[n];
-        boolean[] inMST = new boolean[n];
+        int startIdx = nodeIndex.get(startNode);
+        int[] dist = new int[n];
+        int[] parent = new int[n]; 
+        boolean[] visited = new boolean[n];
 
-        Arrays.fill(key, Integer.MAX_VALUE);
+        Arrays.fill(dist, Integer.MAX_VALUE);
         Arrays.fill(parent, -1);
-        
-        key[startIdx] = 0;
+        dist[startIdx] = 0;
 
         PriorityQueue<int[]> pq = new PriorityQueue<>(Comparator.comparingInt(a -> a[0]));
         pq.offer(new int[]{0, startIdx});
 
-        int totalWeight = 0;
-        List<String> mstEdges = new ArrayList<>();
-
         while (!pq.isEmpty()) {
-            int[] curr = pq.poll();
-            int u = curr[1];
-            if (inMST[u]) continue;
-            inMST[u] = true;
-
-            if (parent[u] != -1) {
-                mstEdges.add(nodeList.get(parent[u]) + " -- " + nodeList.get(u) + "  (weight: " + key[u] + ")");
-                totalWeight += key[u];
-            }
+            int u = pq.poll()[1];
+            if (visited[u]) continue;
+            visited[u] = true;
 
             for (int[] neighbor : graph.getOrDefault(nodeList.get(u), new ArrayList<>())) {
                 int v = neighbor[0], w = neighbor[1];
-                if (!inMST[v] && w < key[v]) {
-                    key[v] = w;
-                    parent[v] = u;
-                    pq.offer(new int[]{w, v});
+                if (!visited[v] && dist[u] != Integer.MAX_VALUE && dist[u] + w < dist[v]) {
+                    dist[v] = dist[u] + w;
+                    parent[v] = u; 
+                    pq.offer(new int[]{dist[v], v});
                 }
             }
         }
 
-        System.out.println("=== Prim: Minimum Spanning Tree (Starting from " + startNode + ") ===");
-        mstEdges.forEach(e -> System.out.println("  " + e));
-        System.out.println("\nTotal Weight: " + totalWeight);
-
-        long visited = 0;
-        for (boolean b : inMST) if (b) visited++;
-        if (visited < n) System.out.println("⚠ กราฟไม่ connected (" + (n - visited) + " node ที่เข้าไม่ถึง)");
+        printResults(startNode, dist, parent);
     }
-    
+
+    private void printResults(String startNode, int[] dist, int[] parent) {
+        for (int i = 0; i < nodeList.size(); i++) {
+            String targetNode = nodeList.get(i);
+            
+            if (targetNode.equals(startNode)) continue;
+
+            if (dist[i] == Integer.MAX_VALUE) {
+                System.out.println("{" + startNode + ", " + targetNode + "} = Unreachable");
+            } else {
+                List<String> path = new ArrayList<>();
+                for (int curr = i; curr != -1; curr = parent[curr]) {
+                    path.add(nodeList.get(curr));
+                }
+                Collections.reverse(path);
+                
+                System.out.println("{" + String.join(", ", path) + "} = " + dist[i]);
+            }
+        }
+    }
+
     public String getInput() { return input; }
     public void setInput(String input) { this.input = input; }
 }
